@@ -33,6 +33,9 @@ services:
       # like `backend/templates/`.
       context: .
       dockerfile: backend/Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:host-gateway"
     env_file:
       - path: ./backend/.env
         required: false

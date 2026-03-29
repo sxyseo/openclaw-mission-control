@@ -49,6 +49,7 @@ import {
   formatTimestamp,
   parseTimestamp,
 } from "@/lib/formatters";
+import { useTranslations } from "@/lib/i18n";
 
 type SessionSummary = {
   key: string;
@@ -478,6 +479,7 @@ function InfoBlock({
 export default function DashboardPage() {
   const router = useRouter();
   const { isSignedIn } = useAuth();
+  const { t } = useTranslations();
 
   const boardsQuery = useListBoardsApiV1BoardsGet<listBoardsApiV1BoardsGetResponse, ApiError>(
     { limit: 200 },
