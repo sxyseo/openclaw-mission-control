@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-
 import { isLikelyValidClerkPublishableKey } from "@/auth/clerkKey";
 import { AuthMode } from "@/auth/mode";
+import createMiddleware from 'next-intl/middleware';
+import { locales, defaultLocale } from './i18n/config';
 
 const isClerkEnabled = () =>
   process.env.NEXT_PUBLIC_AUTH_MODE !== AuthMode.Local &&
@@ -32,15 +33,14 @@ function returnBackUrlFor(req: Request): string {
   return `${requestOrigin(req)}${pathname}${search}${hash}`;
 }
 
-export default isClerkEnabled()
+// Create the Clerk middleware handler
+const clerkMiddlewareHandler = isClerkEnabled()
   ? clerkMiddleware(async (auth, req) => {
       if (isClerkInternalPath(new URL(req.url).pathname)) {
         return NextResponse.next();
       }
       if (isPublicRoute(req)) return NextResponse.next();
 
-      // In middleware, `auth()` resolves to a session/auth context (Promise in current typings).
-      // Use redirectToSignIn() (instead of protect()) for unauthenticated requests.
       const { userId, redirectToSignIn } = await auth();
       if (!userId) {
         return redirectToSignIn({ returnBackUrl: returnBackUrlFor(req) });
@@ -50,9 +50,25 @@ export default isClerkEnabled()
     })
   : () => NextResponse.next();
 
+// Create the next-intl middleware
+const intlMiddleware = createMiddleware({
+  locales,
+  defaultLocale,
+  localePrefix: 'as-needed'
+});
+
+// Combined middleware function
+export default function middleware(req: Request) {
+  // First run the Clerk middleware
+  return clerkMiddlewareHandler(req);
+}
+
 export const config = {
   matcher: [
-    "/((?!_next|_clerk|v1|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    "/(api|trpc)(.*)",
+    // Match all pathnames except for
+    // - … if they start with `/api`, `_next` or `_vercel`
+    // - … the ones containing a dot (e.g. `favicon.ico`)
+    '/((?!api|_next|_clerk|v1|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/(api|trpc)(.*)',
   ],
 };

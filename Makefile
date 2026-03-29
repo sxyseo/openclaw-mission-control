@@ -141,6 +141,16 @@ build: frontend-build ## Build artifacts
 frontend-build: frontend-tooling ## Build frontend (next build)
 	$(NODE_WRAP) --cwd $(FRONTEND_DIR) npm run build
 
+.PHONY: dev
+dev: ## Start backend and frontend in development mode
+	@echo "Starting database..."
+	docker compose -f compose.yml --env-file .env up -d db
+	@sleep 2
+	@echo "Starting backend (port 8000)..."
+	cd $(BACKEND_DIR) && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
+	@echo "Starting frontend (port 3000)..."
+	$(NODE_WRAP) --cwd $(FRONTEND_DIR) npm run dev &
+
 .PHONY: api-gen
 api-gen: frontend-tooling ## Regenerate TS API client (requires backend running at 127.0.0.1:8000)
 	$(NODE_WRAP) --cwd $(FRONTEND_DIR) npm run api:gen
